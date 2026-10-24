@@ -212,6 +212,7 @@ async def test_turn_off_room_level(mock_hub_client) -> None:
         await light.async_turn_off()
 
     mock_hub_client.set_scene.assert_awaited_once_with(3, 0, 0)
+    mock_hub_client.set_room_off.assert_called_once_with(3)
     assert light._brightness == 0
     assert light.is_on is False
 
