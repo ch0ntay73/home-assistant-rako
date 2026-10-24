@@ -111,6 +111,16 @@ class HubClient(Hub):
         self._reader = None
         self._writer = None
 
+    def set_room_off(self, room_id: int) -> None:
+        """Reflect a room being turned off (scene 0) on the room's select and lights."""
+        scene = self._scene_map.get(f"{self.hub_id}_{room_id}")
+        if scene is not None and getattr(scene, "hass", None) is not None:
+            scene.current_option = 0
+        light_prefix = f"{self.hub_id}_{room_id}_"
+        for light_unique_id, light in self._light_map.items():
+            if light_unique_id.startswith(light_prefix) and getattr(light, "hass", None) is not None:
+                light.brightness = 0
+
     async def refresh_room(self, room_id: int) -> None:
         """Re-read a room's channel levels from the hub and push them to its lights and covers."""
         try:
