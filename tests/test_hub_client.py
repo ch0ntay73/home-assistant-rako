@@ -570,3 +570,36 @@ async def test_send_delegates_to_rakopy(hass: HomeAssistant) -> None:
         await client._send(request)
 
     mock_send.assert_awaited_once_with(request)
+
+
+# ---------------------------------------------------------------------------
+# set_room_off
+# ---------------------------------------------------------------------------
+
+def test_set_room_off_updates_select_and_lights(hass: HomeAssistant) -> None:
+    """set_room_off should reset the room's scene select and zero its lights only."""
+    client = _make_hub_client(hass)
+    mock_entry = MagicMock()
+    mock_entry.runtime_data = {"hub_id": MOCK_HUB_ID}
+    hass.config_entries.async_get_entry = MagicMock(return_value=mock_entry)
+    scene = MagicMock()
+    other_scene = MagicMock()
+    room_light = MagicMock()
+    channel_light = MagicMock()
+    other_room_light = MagicMock()
+    client._scene_map = {f"{MOCK_HUB_ID}_1": scene, f"{MOCK_HUB_ID}_2": other_scene}
+    client._light_map = {
+        f"{MOCK_HUB_ID}_1_0": room_light,
+        f"{MOCK_HUB_ID}_1_1": channel_light,
+        f"{MOCK_HUB_ID}_2_0": other_room_light,
+    }
+    other_room_light.brightness = 99
+    other_scene.current_option = 1
+
+    client.set_room_off(1)
+
+    assert scene.current_option == 0
+    assert room_light.brightness == 0
+    assert channel_light.brightness == 0
+    assert other_room_light.brightness == 99
+    assert other_scene.current_option == 1
