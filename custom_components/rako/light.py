@@ -143,9 +143,8 @@ class RakoLightEntity(LightEntity):
         if not self._channel:
             try:
                 await self._hub_client.set_scene(self._room.id, 0, 0)
-                self.brightness = 0
-                # Scene 0 turns the whole room off, so keep the room's scene
-                # select and channel lights in step with it
+                # Scene 0 turns the whole room off, so update the room's scene
+                # select and lights (including this room-level light)
                 self._hub_client.set_room_off(self._room.id)
 
             except (SendCommandError):

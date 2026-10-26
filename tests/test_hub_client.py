@@ -273,23 +273,12 @@ async def test_subscribe_scene_changed_updates_scene(hass: HomeAssistant) -> Non
     assert scene.current_option == 2
 
 
-async def test_subscribe_scene_off_turns_off_room_lights(hass: HomeAssistant) -> None:
-    """SceneChangedEvent for scene 0 should turn off every light in that room only."""
+async def test_subscribe_scene_off_turns_off_room(hass: HomeAssistant) -> None:
+    """SceneChangedEvent for scene 0 should switch the room off via set_room_off."""
     client = MagicMock()
     client.hub_id = MOCK_HUB_ID
     client.refresh_room = AsyncMock()
-
-    room_light = MagicMock()
-    room_light.brightness = 200
-    channel_light = MagicMock()
-    channel_light.brightness = 100
-    other_room_light = MagicMock()
-    other_room_light.brightness = 150
-    client._light_map = {
-        f"{MOCK_HUB_ID}_1_0": room_light,
-        f"{MOCK_HUB_ID}_1_2": channel_light,
-        f"{MOCK_HUB_ID}_11_0": other_room_light,
-    }
+    client._light_map = {}
     client._scene_map = {}
     client._cover_map = {}
 
@@ -298,9 +287,7 @@ async def test_subscribe_scene_off_turns_off_room_lights(hass: HomeAssistant) ->
     )
     await _run_subscribe_with_events(client, [event])
 
-    assert room_light.brightness == 0
-    assert channel_light.brightness == 0
-    assert other_room_light.brightness == 150
+    client.set_room_off.assert_called_once_with(1)
     # Scene 0 is handled locally; re-reading levels could return stale values
     client.refresh_room.assert_not_awaited()
 
@@ -595,6 +582,11 @@ def test_set_room_off_updates_select_and_lights(hass: HomeAssistant) -> None:
     }
     other_room_light.brightness = 99
     other_scene.current_option = 1
+    # An entity that isn't added to hass yet must be left alone
+    unadded_light = MagicMock()
+    unadded_light.hass = None
+    unadded_light.brightness = 77
+    client._light_map[f"{MOCK_HUB_ID}_1_9"] = unadded_light
 
     client.set_room_off(1)
 
@@ -603,3 +595,4 @@ def test_set_room_off_updates_select_and_lights(hass: HomeAssistant) -> None:
     assert channel_light.brightness == 0
     assert other_room_light.brightness == 99
     assert other_scene.current_option == 1
+    assert unadded_light.brightness == 77

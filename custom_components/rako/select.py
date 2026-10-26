@@ -115,6 +115,11 @@ class RakoSceneEntity(SelectEntity):
         """Change the selected option."""
         scene_id = self._reverse_lookup[option]
         await self._hub_client.set_scene(self._room.id, 0, scene_id)
+        if scene_id == 0:
+            # Off is handled without a hub query: update this select and zero
+            # the room's lights directly
+            self._hub_client.set_room_off(self._room.id)
+            return
         # The hub does not reliably push events back after a scene command, so
         # update our own state and then re-read the room's channel levels so the
         # light and cover entities reflect what the scene actually did.

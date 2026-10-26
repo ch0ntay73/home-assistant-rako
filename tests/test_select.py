@@ -151,6 +151,18 @@ async def test_select_option_off(mock_hub_client, monkeypatch) -> None:
     mock_hub_client.set_scene.assert_awaited_once_with(1, 0, 0)
 
 
+async def test_select_option_off_uses_set_room_off(mock_hub_client, monkeypatch) -> None:
+    """Selecting 'Off' should switch the room off locally, without a hub query."""
+    entity = _make_scene_entity(mock_hub_client, current_scene_id=1)
+    monkeypatch.setattr(entity, "async_write_ha_state", lambda: None)
+
+    await entity.async_select_option("Off")
+
+    mock_hub_client.set_scene.assert_awaited_once_with(1, 0, 0)
+    mock_hub_client.set_room_off.assert_called_once_with(1)
+    mock_hub_client.refresh_room.assert_not_awaited()
+
+
 async def test_select_option_updates_state(mock_hub_client, monkeypatch) -> None:
     """After selecting a scene the entity should report it and write HA state."""
     entity = _make_scene_entity(mock_hub_client, current_scene_id=0)
