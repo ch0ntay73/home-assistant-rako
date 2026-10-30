@@ -582,6 +582,17 @@ def test_set_room_off_updates_select_and_lights(hass: HomeAssistant) -> None:
     }
     other_room_light.brightness = 99
     other_scene.current_option = 1
+    room_cover = MagicMock()
+    other_room_cover = MagicMock()
+    other_room_cover.current_cover_position = 100
+    client._cover_map = {
+        f"{MOCK_HUB_ID}_1_1": room_cover,
+        f"{MOCK_HUB_ID}_2_1": other_room_cover,
+    }
+    unadded_cover = MagicMock()
+    unadded_cover.hass = None
+    unadded_cover.current_cover_position = 55
+    client._cover_map[f"{MOCK_HUB_ID}_1_9"] = unadded_cover
     # An entity that isn't added to hass yet must be left alone
     unadded_light = MagicMock()
     unadded_light.hass = None
@@ -596,3 +607,6 @@ def test_set_room_off_updates_select_and_lights(hass: HomeAssistant) -> None:
     assert other_room_light.brightness == 99
     assert other_scene.current_option == 1
     assert unadded_light.brightness == 77
+    assert room_cover.current_cover_position == 0
+    assert other_room_cover.current_cover_position == 100
+    assert unadded_cover.current_cover_position == 55

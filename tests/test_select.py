@@ -1,11 +1,12 @@
 """Tests for select.py."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
 
+from custom_components.rako.hub_client import HubClient
 from custom_components.rako.select import RakoSceneEntity, async_setup_entry
 from rakopy.model import Room, Scene
 
@@ -230,3 +231,29 @@ async def test_async_will_remove_from_hass(mock_hub_client) -> None:
     entity = _make_scene_entity(mock_hub_client)
     await entity.async_will_remove_from_hass()
     mock_hub_client.remove_scene.assert_awaited_once_with(entity)
+
+
+async def test_select_option_off_closes_covers_in_blind_room(hass: HomeAssistant, monkeypatch) -> None:
+    """Choosing 'Off' in a blind room should update the room's cover positions."""
+    with patch("custom_components.rako.hub_client.Hub.__init__", return_value=None):
+        client = HubClient(name="Test Hub", host="192.168.1.1", entry_id="e", hass=hass)
+    mock_entry = MagicMock()
+    mock_entry.runtime_data = {"hub_id": MOCK_HUB_ID}
+    hass.config_entries.async_get_entry = MagicMock(return_value=mock_entry)
+    client.set_scene = AsyncMock()
+    client.refresh_room = AsyncMock()
+
+    cover = MagicMock()
+    cover.current_cover_position = 255
+    other_cover = MagicMock()
+    other_cover.current_cover_position = 255
+    client._cover_map = {f"{MOCK_HUB_ID}_1_1": cover, f"{MOCK_HUB_ID}_2_1": other_cover}
+
+    entity = _make_scene_entity(client, current_scene_id=1)
+    monkeypatch.setattr(entity, "async_write_ha_state", lambda: None)
+
+    await entity.async_select_option("Off")
+
+    client.set_scene.assert_awaited_once_with(1, 0, 0)
+    assert cover.current_cover_position == 0
+    assert other_cover.current_cover_position == 255
